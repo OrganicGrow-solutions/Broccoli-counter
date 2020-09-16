@@ -9,8 +9,9 @@ I haven't included a "requirements.txt" file in this repository that mentions wh
 
 If you open your command line prompt and type the following 2 lines, the packages that this script needs to run should be installed on your computer:
 
-python -m pip install opencv-python
-python -m pip install numpy
+*python -m pip install opencv-python*
+
+*python -m pip install numpy*
 
 In a nutshell, this script only depends on 2 packages: OpenCV (a computer-vision and image editing library) and NumPy (a python library for working with arrays).
 
