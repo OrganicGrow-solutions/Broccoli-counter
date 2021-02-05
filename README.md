@@ -20,7 +20,7 @@ In a nutshell, this script only depends on 2 packages:
 
 As you will be able to see in the repository, there are 4 python (py) files.  Here is what they do:
 
-1. **BroccoliCounter.py**\
+1. **BroccoliCounterForAde.py**\
    This is the main script.  If you run this script in your Python IDE, you can use the program.
 2. **ImageAdjustments.py**\
    Before beginning the plant recognition process, many color & contrast adjustments need to be made to the flyover images.  
@@ -39,4 +39,4 @@ In addition, the **"images" folder** contains the images to be analyzed (there i
 
 Have you ever gone to some Github repository, and looked at all the files, and all the hundreds or thousands of lines of code, and then been like "What does this program actually *do*, actually?"  Ever had the feeling that--before you went through the trouble of downloading the repository as a zip file, installing the required dependencies, opening the program files in your program editor and then finally clicking "build"--you just wanted to see what the program did?  In a way that was easy and didn't require compiling any code?  
 
-I've had that feeling more times than I can remember.  So, in this repository, I've put a short demonstration video (a screen capture of around 45 seconds) called **CounterDemo_0916.mp4** which actually shows the program in action!  As the program evolves and gets updated, I will also update this demo video. The current version was created on September 16th, 2020, and shows the program as it existed and functioned at that time.
+I've had that feeling more times than I can remember.  So, in this repository, I've put a short demonstration video (a screen capture of around 45 seconds) called **CounterDemo_0916.mp4** which actually shows the program in action!  The current version was created on September 16th, 2020, and shows the program as it existed and functioned at that time. The program has since been updated, so the tagging method shown in the video is a bit different from the tagging method currently.
