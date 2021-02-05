@@ -30,11 +30,10 @@ As you will be able to see in the repository, there are 4 python (py) files.  He
    This script contains methods which make that possible.
 4. **ImageTests.py**\
    This script actually tests the images, and counts the plants.
-5. **UI.py**\
-   This contains the GUI information which allows the user to interact with the script.
+
    
-In addition, the **"images" folder** contains the images to be analyzed (there are currently 4 images in that folder).\
-Finally, the **"images_for_fine-tuning" folder** is a folder which gets filled with images during the recognition process, showing what the program was doing at each step of the recognition process.  This helps with fine-tuning the alorithm/debugging.
+In addition, the **"images" folder** contains the images to be analyzed (there is currently 1 image).\
+
 
 # Demonstration
 
