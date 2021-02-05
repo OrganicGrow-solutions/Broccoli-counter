@@ -12,6 +12,8 @@ Color and contrast adjustments are necessary before counting the plants.
 import cv2
 import numpy as np
 
+from tempfile import NamedTemporaryFile
+
 class ImageAdjuster:
     def __init__(self):
         
@@ -33,15 +35,18 @@ class ImageAdjuster:
     
     
     def brighten(self, image):
+        
         # apply a lightening and brightening filter to the image, to make the green stand out
-        new_image = np.zeros(image.shape, image.dtype)
-            
-        for y in range(image.shape[0]):
-            for x in range(image.shape[1]):
-                for c in range(image.shape[2]):
-                    new_image[y,x,c] = np.clip(self.alpha*image[y,x,c] + self.beta, 0, 255)
-        cv2.imwrite("./images_for_fine-tuning/01_brightened.JPG", new_image)
-        return new_image
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+    
+        lim = 255 - 30
+        v[v > lim] = 255
+        v[v <= lim] += 30
+    
+        final_hsv = cv2.merge((h, s, v))
+        newImage = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+        return newImage
 
 
     def makeVivid(self, image):
@@ -52,10 +57,12 @@ class ImageAdjuster:
         mask = cv2.inRange(hsv, lower_color, upper_color)
         
         res = cv2.bitwise_and(image, image, mask= mask)
-        
-        cv2.imwrite("./images_for_fine-tuning/02_vivid.JPG", res)
-        img = cv2.imread("./images_for_fine-tuning/02_vivid.JPG")
-        return img
+        with NamedTemporaryFile() as temp:
+            temp_file = "".join([str(temp.name), "vivid.jpg"])
+            cv2.imwrite(temp_file, res)
+            img = cv2.imread(temp_file)
+                
+            return img
 
         
     def makeGreenDark(self, image):
@@ -68,9 +75,13 @@ class ImageAdjuster:
         vividGreen = 2*g-r-b 
         
         # save the image temporarily, then re-open as "img"
-        cv2.imwrite("./images_for_fine-tuning/03_greenDark.JPG", vividGreen)
-        img = cv2.imread("./images_for_fine-tuning/03_greenDark.JPG")
-        return img
+        with NamedTemporaryFile() as temp:
+            temp_file = "".join([str(temp.name), "dark.jpg"])
+            cv2.imwrite(temp_file, vividGreen)
+            img = cv2.imread(temp_file)
+                
+            return img
+
 
 
     def makeGreyscale(self, image):
@@ -81,5 +92,5 @@ class ImageAdjuster:
         
         ret, thresh = cv2.threshold(gray, self.lower, self.upper, cv2.THRESH_BINARY+cv2.THRESH_OTSU)#cv2.THRESH_BINARY)
         image[thresh == self.upper] = 0
-        cv2.imwrite("./images_for_fine-tuning/04_greyscale.JPG", image)
+
         return image

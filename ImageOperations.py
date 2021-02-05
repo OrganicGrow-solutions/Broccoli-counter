@@ -106,7 +106,7 @@ class ImageOperator:
         # This deletes all the keypoints in an array of arrays (variable 'pointsToDelete')
         # It is a function called by mergeNegibors   
         for o in range(0, len(pointsToDelete)):
-            
+
             thisGroup = pointsToDelete[o]
             
             for keypoint in thisGroup:
@@ -123,7 +123,7 @@ class ImageOperator:
         # It averages the sizes and positions of each keypoint in the sub array, then creates a new keypoint with that average size and position
         # Then, it adds that keypoint to the 'originalPoints' array
         for a in range(0, len(pointsToAdd)):
-            
+
             thisGroup = pointsToAdd[a]
             
             if (len(thisGroup) > 0):
@@ -151,55 +151,144 @@ class ImageOperator:
         im_with_keypoints = cv2.drawKeypoints(baseImage, thesePoints, np.array([]), (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         cv2.imwrite(filename, im_with_keypoints)
         
+    def showImage(self, image):
+        # Debugging here, and just wanted some function to show an image
+        # in real-time, rather than having to save it
+        number = ""
         
-    def drawBoxesAroundKeypointGroups(self, img, keypoints, xStep, yStep):
-        # This function draws boxes on the image, and labels each box with
-        # how many plants were found in that box.  It basically creates the 
-        # final, labeled image for the user to view.
-        x1 = 0
-        y1 = 0
-        x2 = xStep
-        y2 = yStep
+        window_name = 'image'
+        cv2.imshow(window_name, image) 
+       
+        while True:
+            done = cv2.waitKey(0)
+            if done == 13:
+                cv2.destroyAllWindows()
+                return number
+            else:
+                number += str(done-48)
+
+        
+    def findGaps(self, image, unerodedImage, returnImage, xstart, xend, ystart, yend, keypoints):
+        # Trying to segment the rows better here, for the purposes of drawing
+        # boxes around them and showing plant count figures.
+        # This function tries to find the spaces between the rows
+        
+        xDim = image.shape[1]
+        yDim = image.shape[0]
+        
+        lineStarts = []
+        lineEnds = []
+        
+        totalCount = 0        
+        
+        # Due to the image stitching program, large sections of the image
+        # are sometimes black (having been slid left or right).  The counter
+        # doesn't do well with these black sections, so let's find the actual
+        # start of the image by going through the image horizontally and finding
+        # the 1st non-black pixel, and put the coordinates in the variables
+        # startOfImage and xDim, respectively
+        startOfImage = 0
+        for x in range(0, xDim):
+            if np.any(image[1, x] > 30):
+                startOfImage = x
+                break
+        for x in range(xDim-1, 0, -1):
+             if np.any(image[1, x] > 30):
+                xDim = x
+                break           
+        
+                       
+        # Get a pixel "bar" (the height of the image and a width of 10 pixels)
+        # from the image, and slide it
+        # from the left edge to the right edge, getting the average pixel value at each
+        # step.  When the average value is 255, we know we are in a gap, and a flag
+        # is triggered, along with a counter (howWide).  When the average value 
+        # is no longer 255, we know we have hit some plants, so we take the 
+        # middle value of that counter and call it the middle of the gap
+        startsAndEnds = []
+        topAndBottom = [1, yDim-1]
+        howWide = 0
+        for verticalPosition in topAndBottom:
+            for x in range(startOfImage, xDim):
+                avPix = np.average(unerodedImage[yDim-verticalPosition:yDim, x-10:x])
+    
+                if avPix > 252:
+    
+                    howWide += 1
+                if avPix < 255:
+                    if howWide > 3:
+                        middleHere = x - int(howWide / 2)
+                        cv2.circle(image, (middleHere, verticalPosition), 2, (255,0,0), -1)
+                        if verticalPosition == 1:
+                            lineStarts.append(middleHere)
+                        else:
+                            lineEnds.append(middleHere)
+                        howWide = 0
+                    howWide = 0
+        
+        startsAndEnds.append(startOfImage)
+        for start in lineStarts:
+            for end in lineEnds:
+                if abs(start-end) < 30:
+                    startsAndEnds.append(start)
+                    startsAndEnds.append(end)
+
+                    break
+        startsAndEnds.append(xDim-1)
+                
+        for x in range(0, len(startsAndEnds), 2):
+            thisPolygon = np.array([[startsAndEnds[x], 1], [startsAndEnds[x+1], 1], [startsAndEnds[x+1], yDim-1], [startsAndEnds[x], yDim-1]],  np.int32) 
+            tp = cv2.polylines(image, [thisPolygon], True, (255,0,0), 2) 
+            image, count = self.countThisPolygon(image, unerodedImage, keypoints, tp, startsAndEnds[x], startsAndEnds[x+1], 1, yDim-1)
+            totalCount += count
+       
+        returnImage[ystart:yend, xstart:xend, :] = image
+        return returnImage, totalCount
+                
+        
+    def countThisPolygon(self, image, imgForCountAdjustment, keypoints, thisPolygon, px1, px2, py1, py2):
         
         keyPointsInThisBox = 0
-                
-        while True:
-            
-            if y2 > img.shape[0]:
-                y2 = img.shape[0]
-    
-            # Here, we crawl sideways through the picture
-            while True:
-                for k in keypoints:
-                    if (x1 <= k.pt[0] <= x2) and (y1 <= k.pt[1] <= y2):
-                        keyPointsInThisBox += 1
-                if (keyPointsInThisBox > 0):
-                    textBoxWidth = x1 + 20
-                    img = cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 0), 2) 
-                    if (keyPointsInThisBox > 9):
-                        textBoxWidth = x1 + 40
-                    img = cv2.rectangle(img, (x1, y1), (textBoxWidth, y1+30), (192, 192, 192), -1)
-                    img = cv2.putText(img, str(keyPointsInThisBox), (x1, y1+25), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA) 
-                    
-                    keyPointsInThisBox = 0
-                
-                if x2 == img.shape[1]:
-                    break
-                x1 = x2
-                x2 = x2 + xStep
+        #adjustedTotal = 0
+        total = 0
+        print(px1,px2,py1,py2)
+        if (px1 < 0):
+            px1 = 0
         
-                if x2 > img.shape[1]:
-                    x2 = img.shape[1]
-                    
-            # Coming out of this while loop means that we've hit the horizontal edge of the picture,
-            # So, let's increase our y1 and y2 and start again
+        for k in keypoints:
+            if (px1 <= k.pt[0] <= px2) and (py1 <= k.pt[1] <= py2):
+                keyPointsInThisBox += 1
+                
+        if (keyPointsInThisBox > 0):
             
-            if y2 == img.shape[0]:
-                break
+            # now we get the average pixel value in that rectangle
+            # so we can use it to adjust the crop counts
+            avPix = np.average(imgForCountAdjustment[py1:py2, px1:px2])
             
-            x1 = 0
-            x2 = xStep
-            y1 = y2
-            y2 = y2 + yStep
-    
-        cv2.imwrite("tagged.JPG", img)
+            # Here's the magic re-adjustment!
+            adjustedCount = int(79.8124387478213 + (-0.303317043317345*avPix) + (0.0646497500776435*(px2-px1)) + (-0.112239905250904*keyPointsInThisBox))
+            
+            if (keyPointsInThisBox < 10):
+                textCenteringValue = px1 + 3
+            else:
+                textCenteringValue = px1
+  
+            image = cv2.circle(image, (px1+10, py1+10), 16, (55, 170, 72), -1)
+            image = cv2.putText(image, str(adjustedCount), (textCenteringValue, py1+16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (19, 168, 232), 2, cv2.LINE_AA) 
+         
+            # ---- This is for gathering data to do linear regression and therefore alter
+            # ---- the formula for "adjustedCount" 
+            # -------------------------------------
+            
+            #howManyForReal = self.showImage(image[py1:py2, px1:px2])
+            # f = open("trainingData.txt", "a")
+            # dataString = str(round(avPix, 3)) + "," + str(px2-px1) + "," + str(keyPointsInThisBox) + "," + str(howManyForReal) + "\n"
+            # f.write(dataString)
+            # f.close()
+            
+            #print(howManyForReal)
+            total += adjustedCount
+            #adjustedTotal += adjustedCount
+            keyPointsInThisBox = 0
+        return image, total #adjustedTotal
+        
